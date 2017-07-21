@@ -7,6 +7,8 @@ import time
 from threading import Timer
 from threading import Thread
 from cflib.utils.callbacks import Caller #THis will be useful to create a callback for when a joystick button is pressed.
+import cfclient
+from cfclient.utils.input import JoystickReader
 #import matplotlib.pyplot as plt  THIS IS TO BE USED FOR PLOTTING ON THE GO.
 
 import cflib.crtp
@@ -26,7 +28,7 @@ class flying:
 
         # Create a Crazyflie object without specifying any cache dirs
         self._cf = Crazyflie()
-
+        self._joystick = JoystickReader()
         # Connect some callbacks from the Crazyflie API
         self._cf.connected.add_callback(self._connected) #The cf object has these attributes which are used to call a function when any of these events happen.
         self._cf.disconnected.add_callback(self._disconnected)

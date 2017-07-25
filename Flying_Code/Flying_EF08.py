@@ -1,16 +1,13 @@
 ''' This code is used to implement flying, landing and perching operations'''
-
-import basiclog
 import logging
 import pid_param #includes the pid parameters for each flying mode
 import time
 from threading import Timer
 from threading import Thread
 from cflib.utils.callbacks import Caller #THis will be useful to create a callback for when a joystick button is pressed.
-import cfclient
-from cfclient.utils.input import JoystickReader
+import gamepad
+from Plotter import Plot
 #import matplotlib.pyplot as plt  THIS IS TO BE USED FOR PLOTTING ON THE GO.
-
 import cflib.crtp
 from cflib.crazyflie import Crazyflie
 from cflib.crazyflie.log import LogConfig
@@ -25,12 +22,13 @@ class flying:
 
     def __init__(self, link_uri):
         """ Initialize and run with the specified link_uri """
-
+        print(link_uri)
         # Create a Crazyflie object without specifying any cache dirs
         self._cf = Crazyflie()
-        self._joystick = JoystickReader()
         # Connect some callbacks from the Crazyflie API
-        self._cf.connected.add_callback(self._connected) #The cf object has these attributes which are used to call a function when any of these events happen.
+        self._cf.connected.add_callback(self._connected)
+        #The cf object has these  attributes which are used to call
+        # a function when any of these events happen.
         self._cf.disconnected.add_callback(self._disconnected)
         self._cf.connection_failed.add_callback(self._connection_failed)
         self._cf.connection_lost.add_callback(self._connection_lost)
@@ -40,13 +38,14 @@ class flying:
         # Try to connect to the Crazyflie
         self._cf.open_link(link_uri)
 
-########Stuff to do on connection/disconnection
+    # #######Stuff to do on connection/disconnection
 
     def _connected(self, link_uri):
         print("Connected to crazyflie")
-        Thread(target=self.fly).start() #Start flying straight away
-        Thread(target=self.log).start() #start plotting straight away
-
+        # create a plotter object
+        Plot(link_uri, self._cf) #CALL AS A THREAD/PROCESS?
+        self.fly()
+        self._cf.close_link()
     def _connection_failed(self, link_uri, msg):
         """Callback when connection initial connection fails (i.e no Crazyflie
         at the speficied address)"""
@@ -67,6 +66,15 @@ class flying:
 
     def fly(self):
         print("I'm flying")
+        time.sleep(15)
+        self._cf.commander.send_setpoint(0, 0, 0, 0) #THis is so that cf doesn't fly away at the beginning
+        the_time = time.time() + 50
+        while time.time() < the_time:
+            thrust = int(32000*(((gamepad.get())[0])))
+            print(thrust)
+            self._cf.commander.send_setpoint(0, 0, 0, abs(thrust))
+        self._cf.commander.send_setpoint(0, 0, 0, 0)
+
 
     def land(self):
         print("I'm landing")
@@ -80,7 +88,6 @@ class flying:
     def plot(self):
         print("Plotting stuff")
 
-#self._cf.close_link() SEE HOW I'M GOING TO DO THIS.
 if __name__ == '__main__':
     # Initialize the low-level drivers (don't list the debug drivers)
     cflib.crtp.init_drivers(enable_debug_driver=False)

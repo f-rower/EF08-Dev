@@ -10,6 +10,8 @@ from Plotter import Plot
 #import matplotlib.pyplot as plt  THIS IS TO BE USED FOR PLOTTING ON THE GO.
 import cflib.crtp
 from cflib.crazyflie import Crazyflie
+import logging
+import time
 from cflib.crazyflie.log import LogConfig
 
 # Only output errors from the logging framework
@@ -42,8 +44,6 @@ class flying:
 
     def _connected(self, link_uri):
         print("Connected to crazyflie")
-        # create a plotter object
-        Plot(link_uri, self._cf) #CALL AS A THREAD/PROCESS?
         self.fly()
         self._cf.close_link()
     def _connection_failed(self, link_uri, msg):
@@ -66,9 +66,9 @@ class flying:
 
     def fly(self):
         print("I'm flying")
-        time.sleep(15)
+        time.sleep(3)
         self._cf.commander.send_setpoint(0, 0, 0, 0) #THis is so that cf doesn't fly away at the beginning
-        the_time = time.time() + 50
+        the_time = time.time() + 5
         while time.time() < the_time:
             thrust = int(32000*(((gamepad.get())[0])))
             print(thrust)

@@ -148,4 +148,4 @@ if __name__ == '__main__':
     # so this is where your application should do something. In our case we
     # are just waiting until we are disconnected.
     while le.is_connected:
-        time.sleep(1)
+        time.sleep(5)

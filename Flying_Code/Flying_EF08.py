@@ -12,6 +12,15 @@ from cflib.crazyflie import Crazyflie
 import logging
 import time
 from cflib.crazyflie.log import LogConfig
+global PERCHING_EVENT
+PERCHING_EVENT = False
+
+#GAMEPAD MAPPING
+
+AX_L_H = (gamepad.get())[0]
+AX_L_V = (gamepad.get())[1]
+AX_R_H = (gamepad.get())[3]
+AX_R_V = (gamepad.get())[4]
 
 # Only output errors from the logging framework
 logging.basicConfig(level=logging.ERROR)
@@ -131,8 +140,21 @@ class LoggingExample:
 
     def land(self):
         print("I'm landing")
-        while (gamepad.get())[14] == 0:
-            c=2
+        while not PERCHING_EVENT:
+            AX_L_H = (gamepad.get())[0]
+            AX_L_V = (gamepad.get())[1]
+            AX_R_H = (gamepad.get())[3]
+            AX_R_V = (gamepad.get())[4]
+            print(AX_R_V,AX_R_H,AX_L_V,AX_L_H)
+            if (AX_L_H + AX_L_V + AX_R_H + AX_R_V) <0.2: #This allows for some accidental deadband
+                #Do landing routine
+                self._cf.commander.send_setpoint(0, 0, 0, 5000) #sample code
+            else:
+                self.fly() #If button pressed, go back to flying mode
+        self.perch()
+
+    def perch(self):
+         print("I'm perching")
 
 
 

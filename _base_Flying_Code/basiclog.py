@@ -50,9 +50,7 @@ class LoggingExample:
 
     def __init__(self, link_uri):
         """ Initialize and run the example with the specified link_uri """
-        e = open("fran.txt", 'w+')
-        e.write('Hello World')
-        e.close()
+
         # Create a Crazyflie object without specifying any cache dirs
         self._cf = Crazyflie()
 
@@ -109,12 +107,11 @@ class LoggingExample:
 
     def _stab_log_data(self, timestamp, data, logconf): #logconf, timestamp and data come from the imported LogConfig class.
         """Callback from the log API when data arrives"""
-       # print('[%d][%s]: %s' % (timestamp, logconf.name, data))
+        print('[%d][%s]: %s' % (timestamp, logconf.name, data))
         f = open("fileread.txt", 'a+')
         f.write("%s\n" % data)
         f.close()
-        #print(data['stabilizer.roll']) #data is a DICTIONARY with entries that can be accessed in the way shown in
-        # this line.
+        print(data['stabilizer.roll']) #data is a DICTIONARY with entries that can be accessed in the way shown in this line.
     def _connection_failed(self, link_uri, msg):
         """Callback when connection initial connection fails (i.e no Crazyflie
         at the speficied address)"""
@@ -152,28 +149,3 @@ if __name__ == '__main__':
     # are just waiting until we are disconnected.
     while le.is_connected:
         time.sleep(5)
-#############These are the flying, plotting, etc methods
-
-    def fly(self):
-        print("I'm flying")
-        time.sleep(3)
-        self._cf.commander.send_setpoint(0, 0, 0, 0) #THis is so that cf doesn't fly away at the beginning
-        the_time = time.time() + 5
-        while time.time() < the_time:
-            thrust = int(32000*(((gamepad.get())[0])))
-            print(thrust)
-            self._cf.commander.send_setpoint(0, 0, 0, abs(thrust))
-        self._cf.commander.send_setpoint(0, 0, 0, 0)
-
-
-    def land(self):
-        print("I'm landing")
-
-    def perch(self):
-        print("I'm perching")
-
-    def log(self):
-        print("I'm logging stuff")
-
-    def plot(self):
-        print("Plotting stuff")

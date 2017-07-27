@@ -12,15 +12,12 @@ from cflib.crazyflie import Crazyflie
 import logging
 import time
 from cflib.crazyflie.log import LogConfig
-global PERCHING_EVENT
-PERCHING_EVENT = False
+
+#Constants
+PERCHING_EVENT = False #Controls implementation of perching
+DISCONNECT = False #Controls when the cf should be disconnected
 
 #GAMEPAD MAPPING
-
-AX_L_H = (gamepad.get())[0]
-AX_L_V = (gamepad.get())[1]
-AX_R_H = (gamepad.get())[3]
-AX_R_V = (gamepad.get())[4]
 
 # Only output errors from the logging framework
 logging.basicConfig(level=logging.ERROR)
@@ -28,7 +25,7 @@ logging.basicConfig(level=logging.ERROR)
 #plt.ylabel('some numbers')
 #plt.show()
 
-class LoggingExample:
+class Fly_EF08:
     """
     Simple logging example class that logs the Stabilizer from a supplied
     link uri and disconnects after 5s.
@@ -54,10 +51,13 @@ class LoggingExample:
         # Variable used to keep main loop occupied until disconnect
         self.is_connected = True
 
+
     def _connected(self, link_uri):
         """ This callback is called form the Crazyflie API when a Crazyflie
         has been connected and the TOCs have been downloaded."""
         print('Connected to %s' % link_uri)
+        t1 = Thread(target = self.listen_disconnect)
+        t1.start()
 
     # CODE FOR LOGGING
 
@@ -91,6 +91,13 @@ class LoggingExample:
         t2.start()
 
     # METHODS FOR PLOTTING AND ERRORS
+
+    def listen_disconnect(self):
+        """Listen for disconnection"""
+        while 1:
+            if (gamepad.get())[13] != 0:  #Start button
+                print("Disconnected from crazyflie")
+                self._cf.close_link()
 
     def _stab_log_error(self, logconf, msg):
         """Callback from the log API when an error occurs"""
@@ -131,7 +138,7 @@ class LoggingExample:
         self._cf.commander.send_setpoint(0, 0, 0, 0)
         while (gamepad.get())[14] == 0:
             #Change maximum thrust here
-            thrust = int(32000*(((gamepad.get())[0])))
+            thrust = int(32000*((gamepad.get())[0]))
             #print(thrust)
             #print((gamepad.get())[14])
             self._cf.commander.send_setpoint(0, 0, 0, abs(thrust))
@@ -140,21 +147,39 @@ class LoggingExample:
 
     def land(self):
         print("I'm landing")
+        global PERCHING_EVENT
+        #print(PERCHING_EVENT)
         while not PERCHING_EVENT:
+            if (gamepad.get())[6]:
+                PERCHING_EVENT = True
             AX_L_H = (gamepad.get())[0]
             AX_L_V = (gamepad.get())[1]
             AX_R_H = (gamepad.get())[3]
-            AX_R_V = (gamepad.get())[4]
-            print(AX_R_V,AX_R_H,AX_L_V,AX_L_H)
-            if (AX_L_H + AX_L_V + AX_R_H + AX_R_V) <0.2: #This allows for some accidental deadband
-                #Do landing routine
-                self._cf.commander.send_setpoint(0, 0, 0, 5000) #sample code
+            AX_R_V = (gamepad.get())[4] # need some way of updating these values outside the while loop
+            #print(AX_R_V,AX_R_H,AX_L_V,AX_L_H)
+            if (AX_L_H + AX_L_V + AX_R_H + AX_R_V) <0.2: #This allows for some accidental control touch. The smaller
+                # the number, the more sensitive. Consider making just a sum of the ABSOLUTE values.
+                self._cf.commander.send_setpoint(0, 0, 0, 500) #sample code
             else:
                 self.fly() #If button pressed, go back to flying mode
         self.perch()
 
     def perch(self):
-         print("I'm perching")
+        print("I'm perching")
+        global PERCHING_EVENT
+        while PERCHING_EVENT:
+            AX_L_H = (gamepad.get())[0]
+            AX_L_V = (gamepad.get())[1]
+            AX_R_H = (gamepad.get())[3]
+            AX_R_V = (gamepad.get())[4]  # need some way of updating these values outside the while loop
+            #print(AX_R_V, AX_R_H, AX_L_V, AX_L_H)
+            if (AX_L_H + AX_L_V + AX_R_H + AX_R_V) < 0.2:  # This allows for some accidental control touch. The smaller
+                # the number, the more sensitive. Consider making just a sum of the ABSOLUTE values.
+                self._cf.commander.send_setpoint(0, 0, 0, 1000)  # sample code
+            else:
+                PERCHING_EVENT = False
+                self.fly()  # If button pressed, go back to flying mode
+
 
 
 
@@ -172,7 +197,7 @@ if __name__ == '__main__':
         print(i[0])
 
     if len(available) > 0:
-        le = LoggingExample(available[0][0])
+        le = Fly_EF08(available[0][0])
     else:
         print('No Crazyflies found, cannot run example')
 

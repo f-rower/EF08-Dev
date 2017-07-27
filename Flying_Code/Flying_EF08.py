@@ -5,13 +5,16 @@ from threading import Timer
 from threading import Thread
 from cflib.utils.callbacks import Caller #THis will be useful to create a callback for when a joystick button is pressed.
 import gamepad #For reading gamepad inputs.
-from Plotter import Plot
-#import matplotlib.pyplot as plt  THIS IS TO BE USED FOR PLOTTING ON THE GO.
 import cflib.crtp
 from cflib.crazyflie import Crazyflie
 import logging
 import time
 from cflib.crazyflie.log import LogConfig
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from matplotlib import style
+from multiprocessing import Process
+style.use('fivethirtyeight')
 
 #Constants
 PERCHING_EVENT = False #Controls implementation of perching
@@ -21,9 +24,7 @@ DISCONNECT = False #Controls when the cf should be disconnected
 
 # Only output errors from the logging framework
 logging.basicConfig(level=logging.ERROR)
-#plt.plot([1,2,3,4])
-#plt.ylabel('some numbers')
-#plt.show()
+
 
 class Fly_EF08:
     """
@@ -62,23 +63,21 @@ class Fly_EF08:
     # CODE FOR LOGGING
 
         # Add logconfigs for plotting/saving later
-        self._lg_stab = LogConfig(name='Stabilizer', period_in_ms=100) #self.lg_stab is a LogConfig object. See log.py for details.
-        self._lg_stab.add_variable('stabilizer.roll', 'float')
-        self._lg_stab.add_variable('stabilizer.pitch', 'float')
-        self._lg_stab.add_variable('stabilizer.yaw', 'float')
-        self._lg_stab.add_variable('stabilizer.thrust','float')
+        self._lg_vbat = LogConfig(name='pm', period_in_ms=100) #self.lg_stab is a LogConfig object. See log.py for
+        # details.
+        self._lg_vbat.add_variable('pm.vbat', 'float')
         print(time.strftime("%d/%m/%Y"))
         # Adding the configuration cannot be done until a Crazyflie is
         # connected, since we need to check that the variables we
         # would like to log are in the TOC.
         try:
-            self._cf.log.add_config(self._lg_stab)
+            self._cf.log.add_config(self._lg_vbat)
             # This callback will receive the data
-            self._lg_stab.data_received_cb.add_callback(self._stab_log_data)#this says what to do when a new set of data is received
+            self._lg_vbat.data_received_cb.add_callback(self._stab_log_data)#this says what to do when a new set of data is received
             # This callback will be called on errors
-            self._lg_stab.error_cb.add_callback(self._stab_log_error)
+            self._lg_vbat.error_cb.add_callback(self._stab_log_error)
             # Start the logging
-            self._lg_stab.start()
+            self._lg_vbat.start()
         except KeyError as e:
             print('Could not start log configuration,'
                   '{} not found in TOC'.format(str(e)))
@@ -108,7 +107,8 @@ class Fly_EF08:
         """Callback from the log API when data arrives"""
         #print('[%d][%s]: %s' % (timestamp, logconf.name, data))
         f = open("fileread.txt", 'a+')
-        f.write("%s\n" % data)
+        f.write("%s," % time.time())
+        f.write("%s\n" % data['pm.vbat'])
         f.close()
         # data is a DICTIONARY with entries that can be accessed in the way shown in this line.
         #print(data['stabilizer.roll'])
@@ -179,8 +179,6 @@ class Fly_EF08:
             else:
                 PERCHING_EVENT = False
                 self.fly()  # If button pressed, go back to flying mode
-
-
 
 
 
